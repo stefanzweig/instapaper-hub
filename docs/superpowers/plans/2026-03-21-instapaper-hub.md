@@ -42,7 +42,7 @@
   "private": true,
   "scripts": {
     "dev": "wrangler pages dev public --persist",
-    "deploy": "wrangler pages deploy public"
+    "deploy": "wrangler pages deploy public --project-name=instapaper-hub"
   },
   "devDependencies": {
     "wrangler": "^3.0.0"
@@ -67,7 +67,6 @@ git commit -m "chore: add package.json with wrangler dependency"
 ```toml
 name = "instapaper-hub"
 compatibility_date = "2024-01-01"
-pages_build_output_dir = "./public"
 
 [vars]
 # Environment variables must be set in Cloudflare Dashboard for production
@@ -154,6 +153,17 @@ Note: Replace with your actual Instapaper credentials. This file is in .gitignor
 
 ```javascript
 export async function onRequestPost({ env, request }) {
+  // Validate environment variables
+  if (!env.INSTAPAPER_USERNAME || !env.INSTAPAPER_PASSWORD) {
+    return new Response(JSON.stringify({
+      success: false,
+      message: 'Server configuration error: missing credentials'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   const { url } = await request.json();
 
   // Validate URL
@@ -574,25 +584,47 @@ npm run deploy
 
 Expected: Deployment succeeds, URL provided
 
-- [ ] **Step 3: Configure environment variables in Cloudflare Dashboard**
+### Task 11: Configure production environment variables
 
-Go to Cloudflare Dashboard → Pages → instapaper-hub → Settings → Environment variables
+**Files:**
+- None (Cloudflare Dashboard configuration)
 
-Add:
+- [ ] **Step 1: Open Cloudflare Dashboard**
+
+Go to: Cloudflare Dashboard → Pages → instapaper-hub → Settings → Environment variables
+
+- [ ] **Step 2: Add production environment variables**
+
+Add the following variables (Production/Production environment):
 - `INSTAPAPER_USERNAME` = your Instapaper username
 - `INSTAPAPER_PASSWORD` = your Instapaper password
 
-- [ ] **Step 4: Test production deployment**
+Note: These must match your actual Instapaper account credentials.
 
-Open the deployed URL in browser, test with a real URL.
+### Task 12: Test production deployment
 
-Verify: Link appears in your Instapaper account.
+**Files:**
+- None
+
+- [ ] **Step 1: Open deployed URL in browser**
+
+Use the URL from Task 10, Step 2 output.
+
+- [ ] **Step 2: Test with a real URL**
+
+1. Enter a valid URL (e.g., https://example.com)
+2. Click "Add to Instapaper"
+3. Verify success message appears
+
+- [ ] **Step 3: Verify link in Instapaper account**
+
+Open Instapaper website or app, verify the link appears in your unread list.
 
 ---
 
 ## Chunk 5: Documentation
 
-### Task 11: Add README.md
+### Task 13: Add README.md
 
 **Files:**
 - Create: `README.md`
@@ -689,7 +721,7 @@ git add README.md
 git commit -m "docs: add README with usage instructions"
 ```
 
-### Task 12: Final verification
+### Task 14: Final verification
 
 **Files:**
 - None
