@@ -1,6 +1,6 @@
 # Instapaper Hub
 
-A lightweight web tool for adding links to Instapaper from external networks.
+A lightweight web tool for adding links to Instapaper from external networks...
 
 ## Features
 
