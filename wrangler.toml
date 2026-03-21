@@ -1,0 +1,7 @@
+name = "instapaper-hub"
+compatibility_date = "2024-01-01"
+
+[vars]
+# Environment variables must be set in Cloudflare Dashboard for production
+# INSTAPAPER_USERNAME = "your-username"
+# INSTAPAPER_PASSWORD = "your-password"
