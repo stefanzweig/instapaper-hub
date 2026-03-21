@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "wrangler pages dev public --persist",
+    "dev": "wrangler pages dev public --persist-to .wrangler/state",
     "deploy": "wrangler pages deploy public --project-name=instapaper-hub"
   },
   "devDependencies": {
