@@ -138,10 +138,16 @@ instapaper-hub/
 │  Pages Function /api/add                                    │
 ├─────────────────────────────────────────────────────────────┤
 │  POST https://www.instapaper.com/api/add                    │
-│  Headers: Authorization "Basic base64(username:password)"   │
-│  Body: url={encoded_url}                                    │
+│  Headers:                                                   │
+│    - Authorization "Basic base64(username:password)"        │
+│    - Content-Type "application/x-www-form-urlencoded"       │
+│  Body: url={urlencoded_url}                                 │
 │                                                             │
-│  → Returns: "200 OK" or error status                        │
+│  → Response:                                                │
+│     - HTTP 200: Success (body contains "200" or digest)     │
+│     - HTTP 400: Invalid URL                                 │
+│     - HTTP 401: Wrong credentials                           │
+│     - HTTP 429: Rate limit                                  │
 │                                                             │
 │  Return result to frontend                                  │
 └─────────────────────────────────────────────────────────────┘
@@ -149,6 +155,8 @@ instapaper-hub/
 
 **Note**: Instapaper Simple API only requires HTTP Basic Auth with username/password.
 No OAuth token exchange needed.
+
+**Security**: Credentials are stored in Cloudflare environment variables and never exposed to the frontend. The Basic Auth header is constructed server-side only.
 
 ---
 
@@ -167,6 +175,8 @@ No OAuth token exchange needed.
 | 401 Unauthorized | Wrong credentials | Return error message |
 | 429 Too Many Requests | API rate limit | Return rate limit message |
 | 500 Internal | Server error | Return generic error message |
+
+**Note**: Instapaper may return success even if URL already exists in user's list. For v1, treat this as success (idempotent behavior).
 
 ### 5.3 Authentication Strategy
 
@@ -238,6 +248,12 @@ node_modules/
 - Cloudflare Functions built-in logging (view in Dashboard)
 - Error rate monitoring: observe 5xx response ratio
 - Regular dependency updates
+
+### 7.5 CORS & Network
+
+**Same-origin deployment**: Frontend (`public/index.html`) and Function (`/api/add`) are served from the same Cloudflare Pages domain, so CORS is not required.
+
+**Timeout**: 10 second timeout for Instapaper API calls. No retry in v1 (fail fast).
 
 ---
 
