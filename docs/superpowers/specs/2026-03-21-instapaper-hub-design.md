@@ -1,7 +1,7 @@
 # Instapaper Hub - Design Specification
 
 **Date**: 2026-03-21
-**Status**: Draft
+**Status**: Approved
 
 ---
 
@@ -13,11 +13,15 @@
 
 **Core Features**:
 - Input URL to add to Instapaper
-- Optional tags input (comma-separated)
 - Display success/failure status
 - No article list display (initial version)
+- No tags support (v1 uses Simple API for simplicity)
 
 **Deployment Platform**: Cloudflare Pages + Pages Functions
+
+**API Choice**: Instapaper Simple API (`/api/add`) with HTTP Basic Auth
+- Simpler implementation (no OAuth 1.0a signing required)
+- Trade-off: tags not supported in Simple API
 
 ---
 
@@ -28,8 +32,8 @@
 ┌─────────────────┐     ┌──────────────────────────┐     ┌─────────────────┐
 │   User Browser  │ ──► │  Cloudflare Pages        │ ──► │  Instapaper API │
 │                 │     │  + Pages Functions       │     │                 │
-└─────────────────┘     │  - static/index.html     │     │  - /api2/oauth/token
-                        │  - /api/add.js           │     │  - /api2/add      │
+└─────────────────┘     │  - static/index.html     │     │  - /api/add     │
+                        │  - /api/add.js           │     │                 │
                         └──────────────────────────┘     └─────────────────┘
                                    │
                                    ▼
@@ -38,15 +42,13 @@
                         │  Variables:              │
                         │  - INSTAPAPER_USERNAME   │
                         │  - INSTAPAPER_PASSWORD   │
-                        │  - INSTAPAPER_CLIENT_ID  │
-                        │  - INSTAPAPER_CLIENT_SECRET │
                         └──────────────────────────┘
 ```
 
 **Request Flow**:
 1. User visits page → loads static HTML
-2. User submits URL + tags → POST `/api/add`
-3. Pages Function gets/refreshes token → calls Instapaper API
+2. User submits URL → POST `/api/add`
+3. Pages Function calls Instapaper Simple API with HTTP Basic Auth
 4. Returns JSON result → frontend displays success/failure
 
 ---
@@ -66,11 +68,6 @@
 │  │ https://example.com/article     │   │
 │  └─────────────────────────────────┘   │
 │                                         │
-│  Tags (Optional, comma-separated)       │
-│  ┌─────────────────────────────────┐   │
-│  │ technology, ai, reading         │   │
-│  └─────────────────────────────────┘   │
-│                                         │
 │         [ Add to Instapaper ]           │
 │                                         │
 │  ┌─────────────────────────────────┐   │
@@ -84,9 +81,8 @@
 
 | Responsibility | Description |
 |----------------|-------------|
-| Receive POST request | body: `{ url, tags }` |
-| Get/refresh token | Read credentials from env, call OAuth endpoint |
-| Call Instapaper API | POST `/api2/add` with url and tags |
+| Receive POST request | body: `{ url }` |
+| Call Instapaper Simple API | POST `/api/add` with HTTP Basic Auth |
 | Return result | `{ success: true/false, message: string }` |
 
 ### 3.3 File Structure
@@ -116,8 +112,7 @@ instapaper-hub/
 **Request Format** (`POST /api/add`):
 ```json
 {
-  "url": "https://example.com/article",
-  "tags": "technology, ai, reading"
+  "url": "https://example.com/article"
 }
 ```
 
@@ -126,8 +121,7 @@ instapaper-hub/
 // Success
 {
   "success": true,
-  "message": "Successfully added to Instapaper",
-  "instapaper_id": "12345678"
+  "message": "Successfully added to Instapaper"
 }
 
 // Error
@@ -137,24 +131,24 @@ instapaper-hub/
 }
 ```
 
-### 4.2 Instapaper API Call Sequence
+### 4.2 Instapaper Simple API Call
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Pages Function /api/add                                    │
 ├─────────────────────────────────────────────────────────────┤
-│  1. POST https://www.instapaper.com/api2/oauth/token        │
-│     Body: username, password, client_id, client_secret      │
-│     → Returns { access_token: "xxx" }                       │
+│  POST https://www.instapaper.com/api/add                    │
+│  Headers: Authorization "Basic base64(username:password)"   │
+│  Body: url={encoded_url}                                    │
 │                                                             │
-│  2. POST https://www.instapaper.com/api2/add                │
-│     Headers: Authorization "Bearer {access_token}"          │
-│     Body: url, tags                                         │
-│     → Returns { digest: "...", item_id: "12345" }           │
+│  → Returns: "200 OK" or error status                        │
 │                                                             │
-│  3. Return result to frontend                               │
+│  Return result to frontend                                  │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+**Note**: Instapaper Simple API only requires HTTP Basic Auth with username/password.
+No OAuth token exchange needed.
 
 ---
 
@@ -170,17 +164,16 @@ instapaper-hub/
 | Error Type | Cause | Handling |
 |------------|-------|----------|
 | 400 Bad Request | Invalid URL format | Return specific error message |
-| 401 Unauthorized | Wrong credentials |提示 check environment variables |
-| 403 Forbidden | Invalid/expired token | Try refreshing token |
+| 401 Unauthorized | Wrong credentials | Return error message |
 | 429 Too Many Requests | API rate limit | Return rate limit message |
 | 500 Internal | Server error | Return generic error message |
 
-### 5.3 Token Refresh Strategy
+### 5.3 Authentication Strategy
 
-**Initial Version**: Re-fetch token on every request
-- Instapaper OAuth tokens don't expire frequently
-- Simplest implementation
-- Can optimize later with KV caching if needed
+**Simple API with HTTP Basic Auth**:
+- No OAuth token exchange needed
+- Username/password sent with each request via Basic Auth header
+- Simpler implementation, no token storage required
 
 ---
 
@@ -203,8 +196,7 @@ instapaper-hub/
 
 ### 6.3 Test Scope (Initial Version)
 
-- ✅ Add URL (no tags)
-- ✅ Add URL (with tags)
+- ✅ Add URL
 - ✅ Invalid URL error handling
 - ✅ Authentication failure error handling
 
@@ -230,8 +222,6 @@ npm run deploy
 Set in Cloudflare Dashboard:
 - `INSTAPAPER_USERNAME`
 - `INSTAPAPER_PASSWORD`
-- `INSTAPAPER_CLIENT_ID`
-- `INSTAPAPER_CLIENT_SECRET`
 
 ### 7.3 Git Configuration
 
@@ -258,3 +248,4 @@ node_modules/
 - [ ] User authentication for the web tool
 - [ ] Token caching with Cloudflare KV
 - [ ] Browser extension
+- [ ] Tags support (requires Full OAuth API)
