@@ -34,6 +34,10 @@ export async function onRequestPost({ env, request }) {
       body: `url=${encodeURIComponent(url)}`
     });
 
+    console.log('Instapaper API response status:', response.status);
+    const responseBody = await response.text();
+    console.log('Instapaper API response body:', responseBody);
+
     if (response.status === 200) {
       return new Response(JSON.stringify({
         success: true,
