@@ -1,0 +1,12 @@
+{
+  "name": "instapaper-hub",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler pages dev public --persist",
+    "deploy": "wrangler pages deploy public --project-name=instapaper-hub"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
