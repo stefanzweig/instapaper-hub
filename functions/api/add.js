@@ -38,7 +38,7 @@ export async function onRequestPost({ env, request }) {
     const responseBody = await response.text();
     console.log('Instapaper API response body:', responseBody);
 
-    if (response.status === 200) {
+    if (response.status === 200 || response.status === 201) {
       return new Response(JSON.stringify({
         success: true,
         message: 'Successfully added to Instapaper'
